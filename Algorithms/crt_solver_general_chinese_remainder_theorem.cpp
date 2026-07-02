@@ -9,8 +9,8 @@ using i128 = __int128;
 struct Congruence { ll a, m; };
 
 // x === a (mod m) where gcd(m_i, m_j) == 1 for all i, j.
-template <typename T>
-ll crt(const vector<T>& congruences) {
+
+ll crt(const auto& congruences) {
     i128 x = 0;
     ll prod = 1;
     for (auto [a, m] : congruences) prod *= m;
@@ -24,8 +24,7 @@ ll crt(const vector<T>& congruences) {
 }
 
 // x === a (mod m) where gcd(m_i, m_j) may not be 1. 
-template <typename T>
-ll general_crt(vector<T>& congruences) {
+ll general_crt(auto& congruences) {
     while (congruences.size() > 1) {
         auto [a, m] = congruences.back(); congruences.pop_back();
         auto [b, n] = congruences.back(); congruences.pop_back();
