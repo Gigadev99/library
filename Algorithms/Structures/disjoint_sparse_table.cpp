@@ -42,12 +42,12 @@ struct DisjointSparseTable {
     Table table;
     span<const T> nums;
     DisjointSparseTable(F func = F{}) : f(func) {}
-    void build(const auto& nums) {
-        n = size(nums);
-        this->nums = nums;
+    void build(const auto& input) {
+        n = size(input);
+        nums = input;
         k = bit_width(n); 
         table = Table(k, n);
-        build_dst(nums, table, f);
+        build_dst(input, table, f);
     }
     
     T query(unsigned int a, unsigned int b) {
