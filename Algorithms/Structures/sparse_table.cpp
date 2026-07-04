@@ -6,8 +6,8 @@ using namespace std;
 
 // Builds a sparse table from input nums of size n, into a 2D table, using f. The table must be preallocated with size k x n, where k = bit_width(n). 
 void build_sparse_table(const auto& nums, auto& table, auto f) {
-    int n = size(nums); 
-    int k = bit_width((unsigned int)n) - 1; 
+    auto n = size(nums); 
+    int k = bit_width(n) - 1; 
     for (int j = 0; j < n; j++) table[0, j] = nums[j];
     for (int i = 1; i <= k; i++) {
         for (int j = 0; j <= n - (1 << i); j++) {
@@ -16,7 +16,8 @@ void build_sparse_table(const auto& nums, auto& table, auto f) {
     }
 }
 
-auto query_sparse_table(int a, int b, auto& table, auto f) {
+// Queries the Sparse Table, from a to b.
+auto query_sparse_table(integral auto a, integral auto b, auto& table, auto f) {
     unsigned int len = b - a + 1;
     int k = bit_width(len) - 1;
     int w = 1 << k;
