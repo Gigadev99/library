@@ -2,11 +2,11 @@
 #include <vector> 
 using std::vector;
 
-
 template<typename T>
 struct Matrix {
     int r, c;
     vector<T> v; 
+    Matrix() : r(0), c(0) {}
     Matrix(int n, int m) : r(n), c(m), v(n * m) {}
     Matrix(const auto& nums, int n, int m) : r(n), c(m), v(begin(nums), end(nums)) {}
     
@@ -22,6 +22,7 @@ struct MatrixView {
     T* ptr;
     int r, c, stride; 
     // Constructor for a view of a matrix
+    MatrixView() : ptr(nullptr), r(0), c(0), stride(0) {}
     MatrixView(T* d, int n, int m) : ptr(d), r(n), c(m), stride(m) {}
     // Constructor for a view of a submatrix
     MatrixView(T* d, int n, int m, int s) : ptr(d), r(n), c(m), stride(s) {}
