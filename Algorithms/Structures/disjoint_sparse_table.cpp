@@ -28,7 +28,7 @@ void build_dst(const auto& nums, auto& table, auto f) {
 // Queries the Disjoint Sparse Table, from a to b. Must pass the original nums array as well, since the table does not store all values.
 auto query_dst(unsigned int a, unsigned int b, const auto& nums, const auto& table, auto f) {
     if (a == b) return nums[a]; //  a^b == 0, so i = bit_width(n) - 0 = bit_width(n), which is out of bounds for the table.
-    unsigned int n = size(nums);
+    auto n = size(nums);
     int i = bit_width(n) - bit_width(a^b); // first differing bit index
     int r = f(table[i, a], table[i, b]);
     return r;
@@ -54,7 +54,6 @@ struct DisjointSparseTable {
         return query_dst(a, b, nums, table, f);
     }
 };
-
 
 
 /*
