@@ -106,7 +106,7 @@ struct ReflectMatrix {
 auto reflection_hor(MatType auto& matrix) { return ReflectMatrix{matrix, true }; }
 auto reflection_ver(MatType auto& matrix) { return ReflectMatrix{matrix, false}; }
 
-bool is_equal(MatType auto&& A, MatType auto&& B) {
+bool equal(MatType auto&& A, MatType auto&& B) {
     if (A.rows() != B.rows() || A.cols() != B.cols()) return false;
     for (int i = 0; i < A.rows(); i++) 
         for (int j = 0; j < A.cols(); j++) 
@@ -120,6 +120,8 @@ void matprint(MatType auto&& A) {
         std::cout << '\n';
     }
 }
+
+// Polymorphic wrapper that can hold any matrix type
 template<typename T>
 struct AnyMatrix {
     void* matrix;
