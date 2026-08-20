@@ -3,6 +3,7 @@
 #include <vector>  
 #include <array> 
 #include <span>
+#include <iostream>
 #include "../utils.cpp" 
 template<typename M> concept MatType = requires(M A) { A.rows(); A.cols(); A[0, 0]; }; 
 template<typename M> concept OwningMatType = MatType<M> && requires(M A) { A.storage; };
@@ -68,6 +69,75 @@ struct SubMatrix {
 auto submatrix(MatType auto& matrix, int i, int j, int rows, int cols) { assert(i + rows <= matrix.rows() && j + cols <= matrix.cols());
     return SubMatrix{matrix, i, j, rows, cols}; 
 } 
+
+// Left/CCW rotation
+template<MatType M>
+struct RotateMatrix {
+    M& matrix; 
+    auto& operator[](int i, int j) { return matrix[j, matrix.cols() - i - 1]; }
+    int rows() const { return matrix.cols(); }
+    int cols() const { return matrix.rows(); }
+    using value_type = M::value_type;
+};
+// Left/CCW rotation
+auto rotation(MatType auto& matrix) { return RotateMatrix{matrix}; }
+
+template<MatType M>
+struct TransposeMatrix {
+    M& matrix;
+    auto& operator[](int i, int j) { return matrix[j, i]; }
+    int rows() const { return matrix.cols(); }
+    int cols() const { return matrix.rows(); }
+    using value_type = M::value_type;
+};
+auto transpose(MatType auto& matrix) { return TransposeMatrix{matrix}; }
+
+template<MatType M, bool Horizontal = true>
+struct ReflectMatrix {
+    M& matrix;
+    auto& operator[](int i, int j) { 
+        if constexpr (Horizontal) return matrix[i, matrix.cols() - j - 1]; 
+        else return matrix[matrix.rows() - i - 1, j]; 
+    }
+    int rows() const { return matrix.rows(); }
+    int cols() const { return matrix.cols(); }
+    using value_type = M::value_type;
+};
+auto reflection_hor(MatType auto& matrix) { return ReflectMatrix{matrix, true }; }
+auto reflection_ver(MatType auto& matrix) { return ReflectMatrix{matrix, false}; }
+
+bool is_equal(MatType auto&& A, MatType auto&& B) {
+    if (A.rows() != B.rows() || A.cols() != B.cols()) return false;
+    for (int i = 0; i < A.rows(); i++) 
+        for (int j = 0; j < A.cols(); j++) 
+            if (A[i, j] != B[i, j]) return false;
+    return true;
+}
+void matprint(MatType auto&& A) { 
+    for (int i = 0; i < A.rows(); i++) {
+        for (int j = 0; j < A.cols(); j++) 
+            std::cout << A[i][j] << ' ';
+        std::cout << '\n';
+    }
+}
+template<typename T>
+struct AnyMatrix {
+    void* matrix;
+    int (*rows_func)(void*);
+    int (*cols_func)(void*);
+    T& (*access)(void*, int, int);
+    template<MatType M>
+    AnyMatrix(M& A) : matrix(&A) {
+        rows_func = [](void* m) { return static_cast<M*>(m)->rows(); };
+        cols_func = [](void* m) { return static_cast<M*>(m)->cols(); };
+        access = [](void* m, int i, int j) { return (*static_cast<M*>(m))[i, j]; };
+    }
+    int rows() const { return rows_func(matrix); }
+    int cols() const { return cols_func(matrix); }
+    T& operator[](int i, int j) { return access(matrix, i, j); }
+    const T& operator[](int i, int j) const { return access(matrix, i, j); }
+    using value_type = T;
+};
 
 
 /*
