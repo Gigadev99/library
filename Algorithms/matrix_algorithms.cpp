@@ -41,25 +41,25 @@ void operator*=(MatType auto& A, MatType auto&& B) {
     matmul(A, B, C);
     matcopy(C, A);
 }
-// Binary operations. The left operand must be a Owning Matrix, to deduce the returning Matrix type
-auto operator+(const OwningMatType auto& A, MatType auto&& B) {
+// Binary operations. The left operand must be a Owning Matrix to deduce the returning Matrix type
+auto operator+(OwningMatType auto&& A, MatType auto&& B) {
     auto C = A;
     C += B;
     return C;
 }
-auto operator-(const OwningMatType auto& A, MatType auto&& B) {
+auto operator-(OwningMatType auto&& A, MatType auto&& B) {
     auto C = A;
     C -= B;
     return C;
 }
-auto elem_prod(const OwningMatType auto& A, MatType auto&& B) {
+auto elem_prod(OwningMatType auto&& A, MatType auto&& B) {
     auto C = A;
     inplace_elem_prod(C, B);
     return C;
 }
 // Dynamic matrix multiplication if left matrix is dynamic
 template<typename T>
-auto operator*(const Matrix<T>& A, MatType auto&& B) { 
+Matrix<T> operator*(const Matrix<T>& A, MatType auto&& B) { 
     Matrix<T> C(A.rows(), B.cols());
     matmul(A, B, C);
     return C;
@@ -67,16 +67,15 @@ auto operator*(const Matrix<T>& A, MatType auto&& B) {
 // Static matrix multipliation specialization for when both operands are fixed-size matrices
 template<typename T, int N, int M, int P> requires (N != dynamic && P != dynamic)
 Matrix<T, N, P> operator*(const Matrix<T, N, M>& A, const Matrix<T, M, P>& B) {
-    Matrix<T, N, P> C({}); // zeroed  
+    Matrix<T, N, P> C = {}; // zeroed  
     matmul(A, B, C);
     return C;
 } 
 template<OwningMatType M>
-void operator*=(OwningMatType auto& A, MatType auto&& B) { 
+void operator*=(M& A, MatType auto&& B) { 
     M C(A.rows(), A.cols()); // if A is static, this will be static Matrix<T, N, N>, zeroed.
     matmul(A, B, C);
-    A = std::move(C); // saves a copy when A is dynamic
-    std::cout << "Owning *= was chosen\n";
+    A = std::move(C); // saves a copy when A is dynamic 
 }
 // Scalar operations 
 void elem_wise(MatType auto&& A, Number auto b, auto f) { int n = A.rows(), m = A.cols();
@@ -92,15 +91,15 @@ void operator*=(MatType auto& A, Number auto b) { elem_wise(A, b, multiplies{});
 void operator/=(MatType auto& A, Number auto b) { elem_wise(A, b, divides{}); }
 void operator%=(MatType auto& A, integral auto b) { elem_wise(A, b, modulus{}); }
 // Binary operations with scalar (returning a new matrix)
-auto operator+(const OwningMatType auto& A, Number auto b) { auto C = A; C += b; return C; }
-auto operator+(Number auto b, const OwningMatType auto& A) { auto C = A; C += b; return C; }
-auto operator-(const OwningMatType auto& A, Number auto b) { auto C = A; C -= b; return C; }
-auto operator-(Number auto b, const OwningMatType auto& A) { auto C = A; elem_wise(b, C, minus{}); return C; }
-auto operator-(const OwningMatType auto& A)                { auto C = A; elem_wise(0, C, minus{}); return C; }
-auto operator*(const OwningMatType auto& A, Number auto b) { auto C = A; C *= b; return C; }
-auto operator*(Number auto b, const OwningMatType auto& A) { auto C = A; C *= b; return C; }
-auto operator/(const OwningMatType auto& A, Number auto b) { auto C = A; C /= b; return C; }
-auto operator%(const OwningMatType auto& A, integral auto b) { auto C = A; C %= b; return C; }
+auto operator+(OwningMatType auto&& A, Number auto b) { auto C = A; C += b; return C; }
+auto operator+(Number auto b, OwningMatType auto&& A) { auto C = A; C += b; return C; }
+auto operator-(OwningMatType auto&& A, Number auto b) { auto C = A; C -= b; return C; }
+auto operator-(Number auto b, OwningMatType auto&& A) { auto C = A; elem_wise(b, C, minus{}); return C; }
+auto operator-(OwningMatType auto&& A)                { auto C = A; elem_wise(0, C, minus{}); return C; }
+auto operator*(OwningMatType auto&& A, Number auto b) { auto C = A; C *= b; return C; }
+auto operator*(Number auto b, OwningMatType auto&& A) { auto C = A; C *= b; return C; }
+auto operator/(OwningMatType auto&& A, Number auto b) { auto C = A; C /= b; return C; }
+auto operator%(OwningMatType auto&& A, integral auto b) { auto C = A; C %= b; return C; }
 /*
 int main() {
     Matrix<int, 3,3> Identity = {{1,0,0},{0,1,0},{0,0,1}};

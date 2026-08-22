@@ -1,7 +1,9 @@
 #include <span>
 #include "math.cpp"
+
 using ll = long long;
-using u64 = __uint64_t;
+using std::span;
+using u64 = unsigned long long;
 
 bool miller_rabin_test(u64 n, span<int> bases) {
     u64 d = n - 1; int s = 0;

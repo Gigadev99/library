@@ -2,7 +2,7 @@
 #include <vector>
 #include <algorithm>
 #include <ranges>
-#include "../Structures/grid.cpp"
+#include "../Structures/matrix.cpp"
 
 using namespace std;
 using ll = long long;
@@ -29,16 +29,16 @@ int lcs_length(span<int> A, span<int> B) {
 // O(n*m) time and space
 vector<int> lcs(span<int> A, span<int> B) {
     int n = A.size(); int m = B.size(); 
-    Grid<int> L(n + 1, m + 1, 0);
+    Matrix<int> L(n + 1, m + 1, 0);
     for (int i = 1; i <= n; i++) {
         for (int j = 1; j <= m; j++) {
-            L[i][j] = A[i-1] == B[j-1] ? L[i-1][j-1] + 1 : max(L[i-1][j], L[i][j-1]); 
+            L[i, j] = A[i-1] == B[j-1] ? L[i-1, j-1] + 1 : max(L[i-1, j], L[i, j-1]); 
         }
     }
     vector<int> result;
     for (int i = n, j = m; i > 0 && j > 0; ) {
         if (A[i-1] == B[j-1]) result.push_back(A[i-1]), i--, j--;
-        else if (L[i-1][j] > L[i][j-1]) i--;
+        else if (L[i-1, j] > L[i, j-1]) i--;
         else j--;
     }
     ranges::reverse(result);

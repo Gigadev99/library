@@ -41,15 +41,22 @@ struct SparseTable {
         return query_sparse_table(a, b, table, f);
     }
 };
+auto sparse_table(const auto& nums, auto f) {
+    SparseTable<typename std::remove_cvref_t<decltype(nums[0])>, decltype(f)> st(f);
+    st.build(nums);
+    return st;
+}
+
 
 
 // Example usage 
 /* 
+*/
 #include <iostream>
 int main() {
     vector<int> nums = {1,3,5,7,9,4,8,2}; 
     vector<int> store(4 * 8); 
-    mdspan S(store.data(), 4, 8);
+    MatrixView S(store, 4, 8);
     build_sparse_table(nums, S, ranges::min); // works
     struct min_functor { int operator()(int a, int b) { return min(a, b); } };
     SparseTable<int, min_functor> st; st.build(nums); // works 
@@ -57,6 +64,9 @@ int main() {
 
     auto Min = [](int a, int b) { return min(a, b); };
     SparseTable<int, decltype(Min)> st2(Min); st2.build(nums); // works
-    cout << st2.query(1, 5) << endl; // should output 3
-*/
+    cout << st2.query(1, 5) << endl; // 3
+
+    auto st3 = sparse_table(nums, Min); // works
+    cout << st3.query(1, 5) << endl; // 3
+}
 

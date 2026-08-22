@@ -1,17 +1,16 @@
+#pragma once
 #include <vector>
 #include <span>
 #include <bit>
 #include "matrix.cpp"
-#include <iostream>
 using namespace std;
 
 // Builds a Disjoint sparse table from input nums, into table. table dimensions must be (ceil(log2(n)), n).
-void build_dst(const auto& nums, auto& table, auto f) {
-    int n = size(nums);
-    int ceil_log2_n = bit_width((unsigned int)n);
-    for (int i = 0; i < ceil_log2_n; i++) {
-        int k = ceil_log2_n - i;
-        int w = (1 << k);
+void dst_build(auto& table, const auto& nums, auto f) {
+    unsigned int n = size(nums);
+    int ceil_log2_n = bit_width(n);
+    unsigned int w = (1 << ceil_log2_n);
+    for (int i = 0; i < ceil_log2_n; i++) { 
         for (int start = 0; start < n; start += w) {
             int mid = min(start + w/2 - 1, n-1);
             int end = min(start + w - 1, n-1);
@@ -22,16 +21,15 @@ void build_dst(const auto& nums, auto& table, auto f) {
                 table[i, j] = (j > mid + 1) ? f(table[i, j - 1], nums[j]) : nums[j];
             }
         }
+        w >>= 1;
     }
 }
 
-// Queries the Disjoint Sparse Table, from a to b. Must pass the original nums array as well, since the table does not store all values.
-auto query_dst(unsigned int a, unsigned int b, const auto& nums, const auto& table, auto f) {
-    if (a == b) return nums[a]; //  a^b == 0, so i = bit_width(n) - 0 = bit_width(n), which is out of bounds for the table.
-    auto n = size(nums);
+// Queries the Disjoint Sparse Table, from a to b. UNDEFINED for a >= b
+auto dst_query(const auto& table, unsigned int a, unsigned int b, auto f) {
+    assert(a < b);
     int i = bit_width(n) - bit_width(a^b); // first differing bit index
-    int r = f(table[i, a], table[i, b]);
-    return r;
+    return f(table[i, a], table[i, b]);
 }
 
 template<typename T, typename F, typename Table = Matrix<T>>
@@ -41,23 +39,25 @@ struct DisjointSparseTable {
     F f;
     Table table;
     span<const T> nums;
-    DisjointSparseTable(F func = F{}) : f(func) {}
+    DisjointSparseTable(F func = F{}) : f(func) {} 
     void build(const auto& input) {
         n = size(input);
         nums = input;
         k = bit_width(n); 
         table = Table(k, n);
-        build_dst(input, table, f);
+        dst_build(table, input, f);
     }
     
     T query(unsigned int a, unsigned int b) {
-        return query_dst(a, b, nums, table, f);
+        if (a == b) return nums[a];
+        return dst_query(table, a, b, f);
     }
 };
 
 
 /*
 #include <random>
+#include <iostream>
 int brute_sum(const vector<int>& nums, int a, int b) {
     int result = nums[a];
     for (int i = a+1; i <= b; i++) result += nums[i];

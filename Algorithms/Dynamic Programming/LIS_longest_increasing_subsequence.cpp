@@ -51,12 +51,14 @@ int lis_length(span<int> nums) {
     return piles.size();
 }
 
-vector<int> lis(span<int> nums) {
+
+auto lis(const auto& nums) {
     int n = nums.size(); 
     int expected_piles = int(2.2 * sqrt(n));
-    vector<int> piles;                  piles.reserve(expected_piles);
-    vector<int> piles_i;                piles_i.reserve(expected_piles);
-    vector<int> prev(n, -1); 
+    using T = ranges::range_value_t<decltype(nums)>;
+    vector<T> piles;                  piles.reserve(expected_piles);
+    vector<T> piles_i;                piles_i.reserve(expected_piles);
+    vector<T> prev(n, -1); 
     for (int i = 0; i < n; i++) {
         int p = ranges::lower_bound(piles, nums[i]) - piles.begin();
         if (p > 0) prev[i] = piles_i[p - 1]; 

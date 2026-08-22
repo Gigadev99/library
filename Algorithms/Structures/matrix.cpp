@@ -1,8 +1,6 @@
 #pragma once
-#include <cassert>
-#include <vector>  
-#include <array> 
-#include <span>
+#include <cassert> 
+#include <array>  
 #include <iostream>
 #include "../utils.cpp" 
 using std::array;
@@ -44,20 +42,19 @@ struct MatrixView {
     int cols() const { return c; }
     using value_type = T;
 };
-template<typename T, int N, int M> 
-auto matview(const Matrix<T, N, M>& A) { return MatrixView<T>{&A[0, 0], A.rows(), A.cols()}; }
+auto matview(OwningMatType auto&& A) { return MatrixView(&A[0, 0], A.rows(), A.cols()); }
 
 template<typename T, int N, int M> requires (N != dynamic && M != dynamic)
 struct Matrix<T, N, M> {
-    array<array<T, M>, N> storage; 
+    array<T, N * M> storage; 
     Matrix() = default; 
-    Matrix(T val) { for (auto& row : storage) row.fill(val); }
-    Matrix(int n, int m, T val = {}) { assert(n == N && m == M); for (auto& row : storage) row.fill(val); }
+    Matrix(T val) { storage.fill(val); }
+    Matrix(int n, int m, T val = {}) { assert(n == N && m == M); storage.fill(val); }
     Matrix(init_list<array<T, M>> rows) { assert(rows.size() == N);
-        int i = 0; for (const auto& row : rows) storage[i++] = row;
+        int i = 0; for (auto& row : rows) for (auto& val : row) storage[i++] = val;
     }
-    T&       operator[](int i, int j)       { return storage[i][j]; }
-    const T& operator[](int i, int j) const { return storage[i][j]; }
+    T&       operator[](int i, int j)       { return storage[i * M + j]; }
+    const T& operator[](int i, int j) const { return storage[i * M + j]; }
     span<T>  operator[](int i)              { return span<T>(&(*this)[i, 0], M); } 
     span<const T> operator[](int i)   const { return span<const T>(&(*this)[i, 0], M); }
     int rows() const { return N; }
@@ -65,17 +62,20 @@ struct Matrix<T, N, M> {
     using value_type = T;
 };
 
-// Matrix transforms. Dont mark them const. Dont nest like rotation(rotation(A)) (dangling reference!).
+// Matrix transforms. Don't nest like rotation(transpose(A)) (dangling reference!).
 
 template<MatType M>
 struct SubMatrix {
     M& matrix;  int start_i, start_j, r, c; 
-    auto& operator[](int i, int j) { return matrix[start_i + i, start_j + j]; }
+    auto& operator[](int i, int j) const { return matrix[start_i + i, start_j + j]; }
     int rows() const { return r; }
     int cols() const { return c; }
     using value_type = M::value_type;
 };
-auto submatrix(MatType auto& matrix, int i, int j, int rows, int cols) { assert(i + rows <= matrix.rows() && j + cols <= matrix.cols());
+auto submatrix(MatType auto&& matrix, int i, int j, int rows, int cols) 
+    requires is_lvalue_reference_v<decltype(matrix)> // to disallow passing temporary
+{ 
+    assert(i + rows <= matrix.rows() && j + cols <= matrix.cols());
     return SubMatrix{matrix, i, j, rows, cols}; 
 } 
 
@@ -83,28 +83,30 @@ auto submatrix(MatType auto& matrix, int i, int j, int rows, int cols) { assert(
 template<MatType M>
 struct RotateMatrix {
     M& matrix; 
-    auto& operator[](int i, int j) { return matrix[j, matrix.cols() - i - 1]; }
+    auto& operator[](int i, int j) const { return matrix[j, matrix.cols() - i - 1]; }
     int rows() const { return matrix.cols(); }
     int cols() const { return matrix.rows(); }
     using value_type = M::value_type;
 };
 // Left/CCW rotation
-auto rotation(MatType auto& matrix) { return RotateMatrix{matrix}; }
+auto rotation(MatType auto&& matrix) requires is_lvalue_reference_v<decltype(matrix)> 
+    { return RotateMatrix{matrix}; } 
 
 template<MatType M>
 struct TransposeMatrix {
     M& matrix;
-    auto& operator[](int i, int j) { return matrix[j, i]; }
+    auto& operator[](int i, int j) const { return matrix[j, i]; }
     int rows() const { return matrix.cols(); }
     int cols() const { return matrix.rows(); }
     using value_type = M::value_type;
 };
-auto transpose(MatType auto& matrix) { return TransposeMatrix{matrix}; }
+auto transpose(MatType auto&& matrix) requires is_lvalue_reference_v<decltype(matrix)>
+    { return TransposeMatrix{matrix}; }
 
-template<MatType M, bool Horizontal = true>
+template<MatType M, bool Horizontal = true >
 struct ReflectMatrix {
     M& matrix;
-    auto& operator[](int i, int j) { 
+    auto& operator[](int i, int j) const { 
         if constexpr (Horizontal) return matrix[i, matrix.cols() - j - 1]; 
         else return matrix[matrix.rows() - i - 1, j]; 
     }
@@ -112,8 +114,10 @@ struct ReflectMatrix {
     int cols() const { return matrix.cols(); }
     using value_type = M::value_type;
 };
-auto reflection_hor(MatType auto& matrix) { return ReflectMatrix{matrix, true }; }
-auto reflection_ver(MatType auto& matrix) { return ReflectMatrix{matrix, false}; }
+auto x_reflection(MatType auto&& matrix) requires is_lvalue_reference_v<decltype(matrix)>
+    { return ReflectMatrix{matrix, true }; }
+auto y_reflection(MatType auto&& matrix) requires is_lvalue_reference_v<decltype(matrix)>
+    { return ReflectMatrix{matrix, false}; }
 
 bool equal(MatType auto&& A, MatType auto&& B) {
     if (A.rows() != B.rows() || A.cols() != B.cols()) return false;
@@ -138,12 +142,12 @@ struct AnyMatrix {
     void* matrix;
     int (*rows_func)(void*);
     int (*cols_func)(void*);
-    T& (*access)(void*, int, int);
+    T&  (*access)(void*, int, int);
     template<MatType M>
     AnyMatrix(M& A) : matrix(&A) {
         rows_func = [](void* m) { return static_cast<M*>(m)->rows(); };
         cols_func = [](void* m) { return static_cast<M*>(m)->cols(); };
-        access = [](void* m, int i, int j) { return (*static_cast<M*>(m))[i, j]; };
+        access    = [](void* m, int i, int j) { return (*static_cast<M*>(m))[i, j]; };
     }
     int rows() const { return rows_func(matrix); }
     int cols() const { return cols_func(matrix); }
@@ -151,7 +155,7 @@ struct AnyMatrix {
     const T& operator[](int i, int j) const { return access(matrix, i, j); }
     using value_type = T;
 };
-
+/*
 int main() {
     vector<int> v = {1,2,3,4,5,6};
     Matrix<int> M(2,3);
@@ -159,6 +163,7 @@ int main() {
     int arr[3][3] = {};
     MatrixView m2(arr);
     auto m3 = matview(M);
+    MatrixView m3(v.data(), 2, 3);
     vector<vector<int>> vec = {{1,1,1},{2,2,2}};
     Matrix<int,3,3> M1 = {{3,3,3},{4,4,4},{5,5,5}};
     matprint(M1);
@@ -183,7 +188,6 @@ struct MatrixRow {
     iterator begin() { return {matrix, i, 0}; }
     iterator end()   { return {matrix, i, matrix.cols()}; }
 };
-
 template<MatType M>
 struct MatrixIterator {
     M& matrix;

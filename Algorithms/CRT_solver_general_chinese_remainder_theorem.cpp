@@ -1,7 +1,7 @@
 #pragma once
-#include <bits/stdc++.h>
-#include "extended_gcd.cpp"
-using namespace std;
+
+#include "math.cpp"
+
 using ll = long long;
 using i128 = __int128;
 
@@ -9,7 +9,6 @@ using i128 = __int128;
 struct Congruence { ll a, m; };
 
 // x === a (mod m) where gcd(m_i, m_j) == 1 for all i, j.
-
 ll crt(const auto& congruences) {
     i128 x = 0;
     ll prod = 1;
@@ -25,16 +24,17 @@ ll crt(const auto& congruences) {
 
 // x === a (mod m) where gcd(m_i, m_j) may not be 1. 
 ll general_crt(auto& congruences) {
-    while (congruences.size() > 1) {
-        auto [a, m] = congruences.back(); congruences.pop_back();
-        auto [b, n] = congruences.back(); congruences.pop_back();
+    int s = ssize(congruences) - 1;
+    while (s >= 0) {
+        auto [a, m] = congruences[s--]; 
+        auto [b, n] = congruences[s];
         ll g = gcd(m, n);
         if (a % g != b % g) return -1; // no solution
         ll M = modinv(m/g, n/g);
         ll lcm = m/g * n;
         ll x = a + (i128)M * m/g * (b - a);
         x = (x % lcm + lcm) % lcm;
-        congruences.push_back({x, lcm});
+        congruences[s] = {x, lcm};
     }
     auto [x, m] = congruences[0];
     return x;
