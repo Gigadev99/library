@@ -15,14 +15,14 @@ struct Matrix {
     vector<T> storage;
     Matrix() : r(0), c(0) {}
     Matrix(int n, int m, T val = {})  : r(n), c(m),  storage(n * m, val) {}
-    Matrix(auto&& nums, int n, int m) : r(n), c(m),  storage(nums.begin(), nums.begin() + n * m) { assert(nums.size() >= n * m); }
+    Matrix(T* nums, int n, int m) : r(n), c(m),  storage(nums, nums + n * m) { assert(nums != nullptr); }
     Matrix(init_list<init_list<T>> rows) : r(rows.size()), c(rows.begin()->size()), storage(r * c) { 
         int i = 0; 
         for (const auto& row : rows) { assert(row.size() == c); 
             for (const auto& val : row) storage[i++] = val; 
         }
     }
-    void resize(int n, int m) { r = n; c = m;        storage.resize(n * m); } 
+    void resize(int n, int m)        { r = n; c = m; storage.resize(n * m); } 
     T&       operator[](int i, int j)       { return storage[i * c + j]; }
     const T& operator[](int i, int j) const { return storage[i * c + j]; }
     span<T>  operator[](int i)              { return span<T>(&(*this)[i, 0], c); }
@@ -35,19 +35,17 @@ struct Matrix {
 template<typename T>
 struct MatrixView {
     T* ptr; int r, c;  // rows, cols
-    T&   operator[](int i, int j) const { return ptr[i * c + j]; } 
-    span<T> operator[](int i) const { return span<T>(&(*this)[i, 0], c); }
+    T& operator[](int i, int j) const { return ptr[i * c + j]; } 
+    span<T>   operator[](int i) const { return span<T>(&(*this)[i, 0], c); }
     MatrixView() : ptr(nullptr), r(0), c(0) {}
     MatrixView(T* data, int n, int m) : ptr(data), r(n), c(m) {}
-    MatrixView(contiguous_range auto&& nums, int n, int m) : ptr(nums.data()), r(n), c(m) { assert(size(nums) >= n*m); }
-    MatrixView(OwningMatType auto& A) : ptr(&A[0, 0]), r(A.rows()), c(A.cols()) {}
     template<int N, int M> MatrixView(T (&arr)[N][M]) : ptr(&arr[0][0]), r(N), c(M) {}
     int rows() const { return r; }
     int cols() const { return c; }
     using value_type = T;
 };
-template<OwningMatType M> MatrixView(M&) -> MatrixView<typename M::value_type>; // deduction guide
-
+template<typename T, int N, int M> 
+auto matview(const Matrix<T, N, M>& A) { return MatrixView<T>{&A[0, 0], A.rows(), A.cols()}; }
 
 template<typename T, int N, int M> requires (N != dynamic && M != dynamic)
 struct Matrix<T, N, M> {
@@ -66,6 +64,8 @@ struct Matrix<T, N, M> {
     int cols() const { return M; }
     using value_type = T;
 };
+
+// Matrix transforms. Dont mark them const. Dont nest like rotation(rotation(A)) (dangling reference!).
 
 template<MatType M>
 struct SubMatrix {
@@ -151,14 +151,14 @@ struct AnyMatrix {
     const T& operator[](int i, int j) const { return access(matrix, i, j); }
     using value_type = T;
 };
-/*
+
 int main() {
     vector<int> v = {1,2,3,4,5,6};
     Matrix<int> M(2,3);
-    M.storage = move(v);
-    MatrixView m0(M);
+    M.storage = move(v); 
     int arr[3][3] = {};
     MatrixView m2(arr);
+    auto m3 = matview(M);
     vector<vector<int>> vec = {{1,1,1},{2,2,2}};
     Matrix<int,3,3> M1 = {{3,3,3},{4,4,4},{5,5,5}};
     matprint(M1);
